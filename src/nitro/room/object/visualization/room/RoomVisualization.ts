@@ -778,7 +778,7 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                 plane.topOutline = true;
                 plane.bottomOutline = true;
 
-                console.log(plane, plane.leftSide.length);
+                //console.log(plane, plane.leftSide.length);
                 let effectiveMinX = mapData.dimensions.minX;
 
                 if (mapData.doors[0].dir == 90 && Math.floor(mapData.doors[0].x) == effectiveMinX)
