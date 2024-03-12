@@ -780,8 +780,8 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
 
                 //console.log(plane, plane.leftSide.length);
                 let effectiveMinX = mapData.dimensions.minX;
-
-                if (mapData.doors[0].dir == 90 && Math.floor(mapData.doors[0].x) == effectiveMinX)
+                
+                if (mapData.doors[0] && mapData.doors[0].dir == 90 && Math.floor(mapData.doors[0].x) == effectiveMinX)
                 {
                     effectiveMinX++;
                 }
