@@ -343,6 +343,11 @@ export class RoomPlaneParser
         return this._wallHeight;
     }
 
+    public get tileMatrix(): number[][]
+    {
+        return this._tileMatrix;
+    }
+
     public set wallHeight(k: number)
     {
         if(k < 0)

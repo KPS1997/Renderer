@@ -62,6 +62,17 @@ export class RoomPlane implements IRoomPlane
     private _height: number = 0;
     private _canBeVisible: boolean;
 
+    private _topOutline: boolean = false;
+    private _bottomOutline: boolean = false;
+    private _leftOutline: boolean = false;
+    private _rightOutline: boolean = false;
+
+    private _topOutlineCutRight: boolean = false;
+    private _topOutlineCutLeft: boolean = false;
+
+    private _floorCornerOutline: boolean = false;
+
+
     constructor(textureCache: PlaneTextureCache, origin: IVector3D, location: IVector3D, leftSide: IVector3D, rightSide: IVector3D, type: number, usesMask: boolean, secondaryNormals: IVector3D[], randomSeed: number, textureOffsetX: number = 0, textureOffsetY: number = 0, textureMaxX: number = 0, textureMaxY: number = 0)
     {
         this._textureCache = textureCache;
@@ -141,6 +152,51 @@ export class RoomPlane implements IRoomPlane
 
             this._canBeVisible = k;
         }
+    }
+
+    public set topOutline(k: boolean)
+    {
+        this._topOutline = k;
+    }
+
+    public set bottomOutline(k: boolean)
+    {
+        this._bottomOutline = k;
+    }
+
+    public set leftOutline(k: boolean)
+    {
+        this._leftOutline = k;
+    }
+
+    public set rightOutline(k: boolean)
+    {
+        this._rightOutline = k;
+    }
+
+    public set topOutlineCutRight(k: boolean)
+    {
+        this._topOutlineCutRight = k;
+    }
+
+    public set topOutlineCutLeft(k: boolean)
+    {
+        this._topOutlineCutLeft = k;
+    }
+
+    public set floorCornerOutline(k: boolean)
+    {
+        this._floorCornerOutline = k;
+    }
+
+    public get height(): number
+    {
+        return this._height;
+    }
+
+    public get width(): number
+    {
+        return this._width;
     }
 
     public get canBeVisible(): boolean
@@ -310,15 +366,13 @@ export class RoomPlane implements IRoomPlane
     private getTexture(geometry: IRoomGeometry, timeSinceStartMs: number): RenderTexture
     {
         if(!geometry) return null;
-
+        const identifier = this.getTextureIdentifier(geometry.scale);
+        const normal = geometry.getCoordinatePosition(this._normal);
         let bitmapData: PlaneBitmapData = null;
-
         if(this.needsNewTexture(geometry, timeSinceStartMs))
         {
-            const identifier = this.getTextureIdentifier(geometry.scale);
             const width = this._leftSide.length * geometry.scale;
             const height = this._rightSide.length * geometry.scale;
-            const normal = geometry.getCoordinatePosition(this._normal);
 
             bitmapData = this._rasterizer.render(this._uniqueId.toString(), this._textureCache, null, this._id, width, height, geometry.scale, normal, this._hasTexture, this._textureOffsetX, this._textureOffsetY, this._textureMaxX, this._textureMaxY, timeSinceStartMs);
 
@@ -334,6 +388,7 @@ export class RoomPlane implements IRoomPlane
 
         if(bitmapData)
         {
+            this.addOutline(bitmapData.texture);
             this._activeTexture = bitmapData;
 
             return bitmapData.texture;
@@ -867,6 +922,8 @@ export class RoomPlane implements IRoomPlane
         if(!canvas || !maskPixels) return;
 
         const canvasPixels = this._textureCache.getPixels(canvas);
+        //let topHasOutline = false;
+        //let maskStarted = false;
 
         for(let i = 0; i < canvasPixels.length; i += 4)
         {
@@ -875,7 +932,102 @@ export class RoomPlane implements IRoomPlane
             const maskBlue = maskPixels[i + 2];
             const maskAlpha = maskPixels[i + 3];
 
-            if(!maskRed && !maskGreen && !maskBlue) canvasPixels[i + 3] = 0;
+            if(!maskRed && !maskGreen && !maskBlue) 
+            {
+                canvasPixels[i + 3] = 0;
+
+                /*if (!maskStarted) 
+                {
+                    maskStarted = true;
+                }
+
+                //applies to windows as well gotta fix
+                if (maskPixels[i - 4] || maskPixels[i - 3] ||maskPixels[i - 2] //left
+                    || maskPixels[i + 4] || maskPixels[i + 5] ||maskPixels[i + 6] //right
+                    || !topHasOutline) //top)
+                {
+                    canvasPixels[i] = 0;
+                    canvasPixels[i+1] = 0;
+                    canvasPixels[i+2] = 0;
+                    canvasPixels[i+3] = 255;
+                }*/
+            }
+            /*else if(maskStarted) {
+                topHasOutline = true;
+            }*/
+        }
+        const canvaGLTexture = canvas.baseTexture._glTextures['1']?.texture;
+        const gl = (PixiApplicationProxy.instance.renderer as Renderer)?.gl;
+
+        if(!canvaGLTexture || !gl) return;
+
+        gl.bindTexture(gl.TEXTURE_2D, canvaGLTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, canvasPixels);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+    private addOutline(canvas: RenderTexture): void
+    {
+        if(!canvas) return;
+
+        const canvasPixels = this._textureCache.getPixels(canvas);
+
+        let wallThickness = 0;
+        if (this._rightSide.y != 0)//this._topOutlineCutLeft || this._topOutlineCutRight)
+        {
+            wallThickness = Math.round(32 * Math.abs(this._rightSide.y)) - 1 ;
+        }
+        else if (this._rightSide.x != 0)//this._topOutlineCutLeft || this._topOutlineCutRight)
+        {
+            wallThickness = Math.round(32 * Math.abs(this._rightSide.x)) - 1 ;
+        }
+
+        for(let i = 0; i < canvasPixels.length; i += 4)
+        {
+
+            if(((canvas.width) * 4) > i && this._topOutline) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if(((canvas.width - wallThickness) * 4) > i && this._topOutlineCutRight) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if(((canvas.width) * 4) > i && ((wallThickness - 1) * 4) < i && this._topOutlineCutLeft) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if (i >= (canvasPixels.length - (canvas.width * 4)) && this._bottomOutline) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if (i % (canvas.width * 4) == 0 && this._leftOutline) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if ((i+4) % (canvas.width * 4) == 0 && this._rightOutline) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+
+            if((i == 0) && this._floorCornerOutline){
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
         }
 
         const canvaGLTexture = canvas.baseTexture._glTextures['1']?.texture;
@@ -887,4 +1039,159 @@ export class RoomPlane implements IRoomPlane
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, canvasPixels);
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
+    /*private addOutline(canvas: RenderTexture, identifier: String, normal: IVector3D): void
+    {
+        if (identifier == "64_1") return;
+        //console.log(this);
+        //this.color = Math.floor(Math.random() * (0xFFFFFF));
+        //if (this.color == 0xDDDDDD) this.color = 0x00FF00;
+
+        //console.log("identifier", identifier);
+        //console.log("normal ", normal);
+
+        let outlined = false;
+
+        if(!canvas) return;
+        //if(identifier != "64") return;
+        // normal.x = Math.sign(normal.x);
+        // normal.y = Math.sign(normal.y);
+        // normal.z = Math.sign(normal.z);
+        
+        //identifier:
+        //64 = floor, sides included.
+        //64_0_0_1 = top of walls.
+        //64_0_1_0 = right walls, sides included.
+        //64_1_0_0 = left walls, sides included.
+        //64_1 = landscape (right only?).
+        //0.9999999999999999 = ???
+
+        //normal xyz:
+        //-1 -1 -1 = facing left
+        //1 -1 -1 = facing right
+        //1 1 -1 = facing up
+
+        const canvasPixels = this._textureCache.getPixels(canvas);
+        const canvasSmallHeight = canvas.height < 17;
+        const canvasSmallWidth = canvas.width < 17;
+
+        let drawTop = false;
+        let drawLeft = false;
+        let drawRight = false;
+        let drawBottom = false;
+
+        if (normal.x < 0 && normal.y < 0 && normal.z < 0 && identifier != "64" && !canvasSmallHeight) {
+            //right walls
+            drawTop = true;
+            drawLeft = true;
+            drawRight = true;
+            //drawBottom = true;
+            outlined = true;
+        }
+
+        if (normal.x < 0 && normal.y < 0 && normal.z < 0 && identifier != "64" && canvasSmallHeight) {
+            //left side
+            drawTop = true;
+            drawLeft = true;
+            drawRight = true;
+            drawBottom = true;
+            outlined = true;
+        }
+
+        if (normal.x > 0 && normal.y < 0 && normal.z < 0 && !canvasSmallHeight) { //(identifier == "64_1_0_0" || identifier == "64_0.9999999999999999_0_0")
+            //left walls
+            drawTop = true;
+            //drawBottom = true;
+            outlined = true;
+        }
+
+        if (normal.x > 0 && normal.y < 0 && normal.z < 0 && canvasSmallHeight && identifier != "64") {
+            //right side
+            drawTop = true;
+            drawLeft = true;
+            drawRight = true;
+            outlined = true;
+        }
+
+        if (identifier == "64" && canvasSmallHeight && !(normal.x == 0)) {
+            //floor sides
+            drawTop = true;
+            drawBottom = true;
+            drawRight = true;
+            drawLeft = true;
+            outlined = true;
+        }
+
+        if (identifier == "64" && !outlined && !canvasSmallWidth)
+        {
+            //floor tops
+            drawTop = true;
+            drawLeft = true;
+        }
+
+        if (identifier == "64_0_0_1" || identifier == "64_0_0_0.9999999999999999") {
+            //top of walls
+            drawTop = true;
+            if (canvasSmallHeight && canvasSmallWidth)
+            {
+                drawRight = true;
+            }
+            outlined = true;
+        }
+
+        for(let i = 0; i < canvasPixels.length; i += 4)
+        {
+            if((canvas.width * 4) > i && drawTop) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if (i % (canvas.width * 4) == 0 && drawLeft) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if ((i+4) % (canvas.width * 4) == 0 && drawRight) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+            if (i >= (canvasPixels.length - (canvas.width * 4)) && drawBottom) {
+                canvasPixels[i] = 0;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+        }
+
+        if (!outlined && identifier != "64") 
+        {
+            console.log("id ", identifier);
+            console.log("normal ", normal);
+            console.log("canvas ", canvas);
+            console.log("this ", this);
+        }
+
+        if (false)//identifier == "64_0.9999999999999999_0_0")
+        {
+            for(let i = 0; i < canvasPixels.length; i += 4)
+            {
+                canvasPixels[i] = 255;
+                canvasPixels[i+1] = 0;
+                canvasPixels[i+2] = 0;
+                //canvasPixels[i+3] = 255;
+            }
+        }
+
+        const canvaGLTexture = canvas.baseTexture._glTextures['1']?.texture;
+        const gl = (PixiApplicationProxy.instance.renderer as Renderer)?.gl;
+
+        if(!canvaGLTexture || !gl) return;
+
+        gl.bindTexture(gl.TEXTURE_2D, canvaGLTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, canvasPixels);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }*/
 }

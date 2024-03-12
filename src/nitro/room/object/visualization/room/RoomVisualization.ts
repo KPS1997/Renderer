@@ -379,6 +379,8 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
         if(!isNaN(this._wallThickness)) this._roomPlaneParser.wallThicknessMultiplier = this._wallThickness;
 
         const mapData = this.object.model.getValue<RoomMapData>(RoomObjectVariable.ROOM_MAP_DATA);
+        
+        //console.log(this);
 
         if(!this._roomPlaneParser.initializeFromMapData(mapData)) return;
 
@@ -535,7 +537,7 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                         const _local_21 = this._roomPlaneParser.getPlaneMaskRightSideLoc(index, _local_19);
                         const _local_22 = this._roomPlaneParser.getPlaneMaskLeftSideLength(index, _local_19);
                         const _local_23 = this._roomPlaneParser.getPlaneMaskRightSideLength(index, _local_19);
-
+                        
                         plane.addRectangleMask(_local_20, _local_21, _local_22, _local_23);
 
                         _local_19++;
@@ -569,34 +571,284 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
 
             if(plane && sprite && plane.leftSide && plane.rightSide)
             {
+
                 if((plane.type === RoomPlane.TYPE_WALL) && ((plane.leftSide.length < 1) || (plane.rightSide.length < 1)))
                 {
                     sprite.alphaTolerance = AlphaTolerance.MATCH_NOTHING;
+                    //wall borders
                 }
                 else
                 {
                     sprite.alphaTolerance = AlphaTolerance.MATCH_OPAQUE_PIXELS;
+                    //wall sides
                 }
 
                 if(plane.type === RoomPlane.TYPE_WALL)
                 {
                     sprite.tag = 'plane.wall@' + (planeIndex + 1);
+                    //wall all
                 }
 
                 else if(plane.type === RoomPlane.TYPE_FLOOR)
                 {
                     sprite.tag = 'plane.floor@' + (planeIndex + 1);
+                    //floor all
                 }
 
                 else
                 {
                     sprite.tag = 'plane@' + (planeIndex + 1);
+                    //??landscape maybe??
                 }
 
                 sprite.spriteType = RoomObjectSpriteType.ROOM_PLANE;
+                //this.outlineHell(sprite, plane);
             }
 
             planeIndex++;
+        }
+    }
+
+    protected outlineHell(sprite: IRoomObjectSprite, plane:RoomPlane): void
+    {
+        if(!this.updatePlanes) return;
+        const mapData = this.object.model.getValue<RoomMapData>(RoomObjectVariable.ROOM_MAP_DATA);
+        if((plane.type === RoomPlane.TYPE_WALL) && ((plane.leftSide.length < 1) || (plane.rightSide.length < 1)))
+        {
+            //wallborders
+            if(plane.height < 33 && plane.width < 33)
+            {
+                //wallbordercorners
+                plane.topOutline = true;
+                plane.rightOutline = true;
+            }
+            else if(plane.normal.x == 0 && plane.normal.y == 0 && plane.normal.z == 1) //plane.color == 0x999999
+            {
+                //wallbordertops
+                plane.topOutline = true;
+
+                //console.log(sprite);
+                //this._roomPlaneParser._tileMatrix
+                if (plane.rightSide.x == 0) //wallbordertops right
+                {
+                    let tileX = Math.floor(plane.location.x);
+                    let tileY = Math.ceil(plane.location.y);
+                    let adjacentTileX = tileX + 1;
+                    let adjacentTileY = tileY - 1;
+
+                    let notConnected = false;
+                    if (adjacentTileX < 0 || adjacentTileY < 0) notConnected = true;
+
+                    if (!notConnected && this._roomPlaneParser.tileMatrix[adjacentTileY][adjacentTileX] >= 0)
+                    {
+                        //wallbordertops right connected
+                        plane.topOutline = false;
+                        plane.topOutlineCutRight = true;
+                    }
+                    else
+                    {
+                        let needsLeftOutline = false;
+                        for (let i = this._roomPlaneParser.minX + 1;i <= tileX - plane.leftSide.length;i++)
+                        {
+                            if (this._roomPlaneParser.tileMatrix[tileY][i] >= 0)
+                            {
+                                //wallbordertops right gap
+                                needsLeftOutline = true;
+                                i = tileX;
+                            }
+                        }
+                        if (needsLeftOutline)
+                            plane.leftOutline = true;
+                    }
+                }
+                else //wallbordertops left
+                {
+                    let tileX = Math.ceil(plane.location.x) ;
+                    let tileY = Math.floor(plane.location.y) + plane.leftSide.length;
+                    let adjacentTileX = tileX - 1;
+                    let adjacentTileY = tileY + 1;
+
+                    let notConnected = false;
+                    if (adjacentTileX < 0 || adjacentTileY < 0 || adjacentTileX >= this._roomPlaneParser.tileMatrix[0].length || adjacentTileY >= this._roomPlaneParser.tileMatrix.length) notConnected = true;
+
+                    if (!notConnected && this._roomPlaneParser.tileMatrix[adjacentTileY][adjacentTileX] >= 0)
+                    {
+                        //wallbordertops left connected
+                        plane.topOutline = false;
+                        plane.topOutlineCutLeft = true;
+                    }
+                    else
+                    {
+                        tileY -= plane.leftSide.length;
+                        let needsRightOutline = false;
+                        for (let i = this._roomPlaneParser.minY + 1;i < tileY;i++)
+                        {
+                            if (this._roomPlaneParser.tileMatrix[i][tileX] >= 0)
+                            {
+                                //wallbordertops left gap
+                                needsRightOutline = true;
+                                i = tileY;
+                            }
+                        }
+                        if (needsRightOutline)
+                            plane.rightOutline = true;
+                    }
+                }
+            }
+            else
+            {
+                //wallbordersides
+                if (plane.rightSide.y == 0)
+                {
+                    //wallborderside left
+                    plane.topOutline = true;
+                    plane.bottomOutline = true;
+                    plane.rightOutline = true;
+                    plane.leftOutline = true;
+                }
+                else
+                {
+                    //wallborderside right
+                    plane.topOutline = true;
+                    plane.bottomOutline = true;
+                    plane.rightOutline = true;
+                    plane.leftOutline = true;
+                }
+            }
+        }
+        else if (plane.type === RoomPlane.TYPE_WALL)
+        {
+            //walls
+            plane.topOutline = true;
+            //if (plane.leftSide.length == 3)
+                //console.log(plane, this);
+            if (plane.normal.x == 0) //walls right
+            {
+                let tileX = Math.floor(plane.location.x);
+                let tileY = Math.ceil(plane.location.y);
+                
+                let adjustedTileX = tileX - plane.leftSide.length;
+                let needsLeftOutline = false;
+                for (let i = this._roomPlaneParser.minX + 1;i <= adjustedTileX;i++)
+                {
+                    if (this._roomPlaneParser.tileMatrix[tileY][i] >= 0)
+                    {
+                        //walls right gap
+                        needsLeftOutline = true;
+                        i = tileX;
+                    }
+                }
+                if (needsLeftOutline)
+                    plane.leftOutline = true;
+            }
+            else //walls left
+            {
+                let tileX = Math.ceil(plane.location.x);
+                let tileY = Math.ceil(plane.location.y);
+
+                //if (plane.leftSide.length == 2)
+                //console.log(tileX, tileY, plane, this);
+                
+                let needsRightOutline = false;
+                for (let i = this._roomPlaneParser.minY + 1;i < tileY;i++)
+                {
+                    if (this._roomPlaneParser.tileMatrix[i][tileX] >= 0)
+                    {
+                        //walls left gap
+                        needsRightOutline = true;
+                        i = tileY;
+                    }
+                }
+                if (needsRightOutline)
+                    plane.rightOutline = true;
+            }
+        }
+        else if (plane.type === RoomPlane.TYPE_FLOOR)
+        {
+            //floors
+            if (plane.normal.x == 1 && plane.normal.y == 0 && plane.normal.z == 0)
+            {
+                //right floor border
+                plane.topOutline = true;
+                plane.bottomOutline = true;
+            }
+            else if (plane.normal.x == 0 && plane.normal.y == 1 && plane.normal.z == 0)
+            {
+                //left floor border
+                plane.topOutline = true;
+                plane.bottomOutline = true;
+
+                console.log(plane, plane.leftSide.length);
+                let effectiveMinX = mapData.dimensions.minX;
+
+                if (mapData.doors[0].dir == 90 && Math.floor(mapData.doors[0].x) == effectiveMinX)
+                {
+                    effectiveMinX++;
+                }
+
+                let tileX = Math.ceil(plane.location.x - plane.leftSide.length);
+                let tileY = Math.floor(plane.location.y);
+
+                if (tileX-1 > 0 && tileY > 0 
+                    && tileX-1 < this._roomPlaneParser.tileMatrix[0].length 
+                    && tileY < this._roomPlaneParser.tileMatrix.length)
+                {
+                    if (tileX > effectiveMinX && this._roomPlaneParser.tileMatrix[tileY][tileX-1] < 0)
+                    {
+                        plane.leftOutline = true;
+                    }
+                }
+                /*if (plane.leftSide.length < 1)
+                {
+                    //left floor border stairs? (not just)
+                    plane.leftOutline = true;
+                    plane.rightOutline = true;
+                }*/
+            }
+            else
+            {
+                let needsTopOutline = true;
+                let needsLeftOutline = true;
+                let needsFloorCornerOutline = true;
+
+                let isStairTop = true;
+
+                let tileX = Math.floor(plane.location.x) - (Math.floor(plane.leftSide.length) - 1);
+                let tileY = Math.floor(plane.location.y) - (Math.floor(plane.rightSide.length) - 1);
+
+                if (plane.leftSide.length % 1 != 0 || plane.rightSide.length % 1 != 0)
+                    {
+                        //stair memes
+                    }
+
+                if ((tileY < this._roomPlaneParser.tileMatrix.length)
+                    && (tileX < this._roomPlaneParser.tileMatrix[0].length)
+                    && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY][tileX - 1] >= 0)
+                {
+                    needsLeftOutline = false;
+                }
+
+                if((tileY < this._roomPlaneParser.tileMatrix.length)
+                && (tileX < this._roomPlaneParser.tileMatrix[0].length)
+                && (tileY - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY - 1][tileX] >= 0)
+                {
+                    needsTopOutline = false;
+                }
+
+                if((tileY < this._roomPlaneParser.tileMatrix.length)
+                && (tileX < this._roomPlaneParser.tileMatrix[0].length)
+                && (tileY - 1 >= 0) && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY - 1][tileX - 1] >= 0)
+                {
+                    needsFloorCornerOutline = false;
+                }
+
+                if (needsTopOutline)
+                    plane.topOutline = true;
+                if (needsLeftOutline)
+                    plane.leftOutline = true;
+                if (needsFloorCornerOutline)
+                    plane.floorCornerOutline = true;
+            }
         }
     }
 
@@ -745,6 +997,7 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                     {
                         if(plane.visible)
                         {
+                            this.outlineHell(sprite, plane);
                             depth = ((plane.relativeDepth + this.floorRelativeDepth) + (id / 1000));
 
                             if(plane.type !== RoomPlane.TYPE_FLOOR)
@@ -788,6 +1041,8 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                         updated = true;
                     }
                 }
+
+                //this.outlineHell(sprite, plane);
             }
 
             index++;
