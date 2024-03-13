@@ -826,6 +826,13 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                     && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY][tileX - 1] >= 0)
                 {
                     needsLeftOutline = false;
+                    if (mapData.doors[0] && mapData.doors[0].dir == 90 
+                        && Math.floor(mapData.doors[0].x) == tileX-1 
+                        && Math.floor(mapData.doors[0].y) == tileY)
+                    {
+                        console.log(mapData.doors[0]);
+                        needsLeftOutline = true;
+                    }
                 }
 
                 if((tileY < this._roomPlaneParser.tileMatrix.length)
