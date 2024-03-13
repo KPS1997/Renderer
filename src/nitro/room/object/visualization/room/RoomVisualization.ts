@@ -836,7 +836,7 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
 
                 if ((tileY < this._roomPlaneParser.tileMatrix.length)
                     && (tileX < this._roomPlaneParser.tileMatrix[0].length)
-                    && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY][tileX - 1] >= 0)
+                    && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY][tileX - 1] == this._roomPlaneParser.tileMatrix[tileY][tileX])
                 {
                     needsLeftOutline = false;
                     if (mapData.doors[0] && mapData.doors[0].dir == 90 
@@ -849,14 +849,15 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
 
                 if((tileY < this._roomPlaneParser.tileMatrix.length)
                 && (tileX < this._roomPlaneParser.tileMatrix[0].length)
-                && (tileY - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY - 1][tileX] >= 0)
+                && (tileY - 1 >= 0) && (this._roomPlaneParser.tileMatrix[tileY - 1][tileX] == this._roomPlaneParser.tileMatrix[tileY][tileX]
+                || (tileY - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY - 1][tileX] >= 0 && plane.rightSide.length == 0.25))
                 {
                     needsTopOutline = false;
                 }
 
                 if((tileY < this._roomPlaneParser.tileMatrix.length)
                 && (tileX < this._roomPlaneParser.tileMatrix[0].length)
-                && (tileY - 1 >= 0) && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY - 1][tileX - 1] >= 0)
+                && (tileY - 1 >= 0) && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY - 1][tileX - 1] == this._roomPlaneParser.tileMatrix[tileY][tileX])
                 {
                     needsFloorCornerOutline = false;
                 }
