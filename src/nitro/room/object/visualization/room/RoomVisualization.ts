@@ -764,6 +764,7 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
             }
         }
         else if (plane.type === RoomPlane.TYPE_FLOOR)
+        //plane.color = Math.random() * 0xFFFFFF;
         {
             //floors
             if (plane.normal.x == 1 && plane.normal.y == 0 && plane.normal.z == 0)
@@ -771,6 +772,26 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                 //right floor border
                 plane.topOutline = true;
                 plane.bottomOutline = true;
+
+                let tileX = Math.floor(plane.location.x);
+                let tileY = Math.floor(plane.location.y);
+                console.log(tileX,tileY,plane);
+
+                if (tileX-1 > 0 && tileY > 0 
+                    && tileX < this._roomPlaneParser.tileMatrix[0].length 
+                    && tileY-1 < this._roomPlaneParser.tileMatrix.length)
+                {
+                    if (tileY > mapData.dimensions.minY && this._roomPlaneParser.tileMatrix[tileY-1][tileX] < 0)
+                    {
+                        plane.rightOutline = true;
+                    }
+                }
+
+                if (plane.leftSide.length == 0.25)
+                {
+                    //right floor border stairs? (not just)
+                    plane.rightOutline = true;
+                }
             }
             else if (plane.normal.x == 0 && plane.normal.y == 1 && plane.normal.z == 0)
             {
@@ -798,12 +819,12 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                         plane.leftOutline = true;
                     }
                 }
-                /*if (plane.leftSide.length < 1)
+
+                if (plane.leftSide.length == 0.25)
                 {
                     //left floor border stairs? (not just)
                     plane.leftOutline = true;
-                    plane.rightOutline = true;
-                }*/
+                }
             }
             else
             {
@@ -811,15 +832,8 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                 let needsLeftOutline = true;
                 let needsFloorCornerOutline = true;
 
-                let isStairTop = true;
-
                 let tileX = Math.floor(plane.location.x) - (Math.floor(plane.leftSide.length) - 1);
                 let tileY = Math.floor(plane.location.y) - (Math.floor(plane.rightSide.length) - 1);
-
-                if (plane.leftSide.length % 1 != 0 || plane.rightSide.length % 1 != 0)
-                    {
-                        //stair memes
-                    }
 
                 if ((tileY < this._roomPlaneParser.tileMatrix.length)
                     && (tileX < this._roomPlaneParser.tileMatrix[0].length)
@@ -830,7 +844,6 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                         && Math.floor(mapData.doors[0].x) == tileX-1 
                         && Math.floor(mapData.doors[0].y) == tileY)
                     {
-                        console.log(mapData.doors[0]);
                         needsLeftOutline = true;
                     }
                 }
@@ -847,6 +860,17 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
                 && (tileY - 1 >= 0) && (tileX - 1 >= 0) && this._roomPlaneParser.tileMatrix[tileY - 1][tileX - 1] >= 0)
                 {
                     needsFloorCornerOutline = false;
+                }
+
+                if (Math.abs(plane.leftSide.length) == 0.25)
+                {
+                    //stairtop left
+                    needsTopOutline = true;
+                }
+                else if (Math.abs(plane.rightSide.length) == 0.25)
+                {
+                    //stairtop right
+                    needsLeftOutline = true;
                 }
 
                 if (needsTopOutline)
