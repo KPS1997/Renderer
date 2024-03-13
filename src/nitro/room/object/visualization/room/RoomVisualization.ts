@@ -775,7 +775,6 @@ export class RoomVisualization extends RoomObjectSpriteVisualization implements 
 
                 let tileX = Math.floor(plane.location.x);
                 let tileY = Math.floor(plane.location.y);
-                console.log(tileX,tileY,plane);
 
                 if (tileX-1 > 0 && tileY > 0 
                     && tileX < this._roomPlaneParser.tileMatrix[0].length 
